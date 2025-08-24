@@ -5,6 +5,7 @@ import {TickBitmap} from "./libraries/TickBitmap.sol";
 import {Tick} from "./libraries/Tick.sol";
 import {LiquidityMath} from "./libraries/LiquidityMath.sol";
 import {SqrtPriceMath} from "./libraries/SqrtPriceMath.sol";
+import {SwapMath} from "./libraries/SwapMath.sol";
 import {Position} from "./libraries/Position.sol";
 
 contract MercuriusPool {

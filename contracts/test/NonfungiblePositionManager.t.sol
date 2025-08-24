@@ -39,9 +39,9 @@ contract NFPMTest is Test {
         // 1. Check if the NFT was minted to the correct owner (the test contract)
         assertEq(nfpm.ownerOf(tokenId), address(this));
 
-        // 2. Check if the position details were stored correctly
-        NonfungiblePositionManager.Position memory pos = nfpm.positions(tokenId);
-        assertEq(pos.liquidity, liquidityAmount);
-        assertEq(pos.tickLower, tickLower);
+    // 2. Check if the position details were stored correctly
+    (address token0_, address token1_, uint24 fee_, int24 tickLower_, int24 tickUpper_, uint128 liquidity_) = nfpm.positions(tokenId);
+    assertEq(liquidity_, liquidityAmount);
+    assertEq(tickLower_, tickLower);
     }
 }

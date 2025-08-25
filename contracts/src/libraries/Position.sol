@@ -9,11 +9,14 @@ library Position {
     }
 
     function update(
-        Info storage self,
-        int128 liquidityDelta
+        mapping(bytes32 => Info) storage self,
+        bytes32 key,
+        uint128 liquidityDelta
     ) internal {
-        uint128 liquidityBefore = self.liquidity;
-        uint128 liquidityAfter = LiquidityMath.addDelta(liquidityBefore, liquidityDelta);
-        self.liquidity = liquidityAfter;
+        Info storage pos = self[key];
+        pos.liquidity = LiquidityMath.addDelta(
+            pos.liquidity,
+            int128(liquidityDelta)
+        );
     }
 }

@@ -1,40 +1,51 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {IMercuriusFactory} from "./interfaces/IMercuriusFactory.sol";
 import {MercuriusPool} from "./MercuriusPool.sol";
 
-contract MercuriusFactory is Ownable {
+contract MercuriusFactory is IMercuriusFactory {
+    // Mapping to store created pools
+    mapping(address => mapping(address => mapping(uint24 => address)))
+        public override getPool;
 
-    // Event jo emit hoga jab bhi naya pool banega
-    event PoolCreated(
-        address indexed token0,
-        address indexed token1,
-        uint24 indexed fee,
-        address pool
-    );
+    // Struct to hold pool parameters temporarily during creation
+    struct PoolParameters {
+        address factory;
+        address token0;
+        address token1;
+        uint24 fee;
+        int24 tickSpacing;
+    }
 
-    // Mapping to store addresses of all created pools
-    // getPool[tokenA][tokenB][fee] => poolAddress
-    mapping(address => mapping(address => mapping(uint24 => address))) public getPool;
-
-    constructor() Ownable(msg.sender) {}
+    PoolParameters public override parameters;
 
     function createPool(
         address tokenA,
         address tokenB,
         uint24 fee,
-        uint160 sqrtPriceX96Initial
-    ) external onlyOwner returns (address pool) {
-        require(tokenA != tokenB, "IDENTICAL_ADDRESSES"); 
-
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        int24 tickSpacing
+    ) external returns (address pool) {
+        require(tokenA != tokenB, "IDENTICAL_ADDRESSES");
+        (address token0, address token1) = tokenA < tokenB
+            ? (tokenA, tokenB)
+            : (tokenB, tokenA);
+        require(token0 != address(0), "ZERO_ADDRESS");
 
         require(getPool[token0][token1][fee] == address(0), "POOL_EXISTS");
 
-        pool = address(new MercuriusPool(token0, token1, fee, sqrtPriceX96Initial));
+        parameters = PoolParameters({
+            factory: address(this),
+            token0: token0,
+            token1: token1,
+            fee: fee,
+            tickSpacing: tickSpacing
+        });
+        
+        pool = address(new MercuriusPool());
         getPool[token0][token1][fee] = pool;
 
-        emit PoolCreated(token0, token1, fee, pool);
+        // Clear the parameters after creation
+        delete parameters;
     }
 }

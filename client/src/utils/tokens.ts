@@ -3,12 +3,19 @@
 export interface Token {
   name: string;
   symbol: string;
-  address: `0x${string}`; // Use the `0x` prefixed string type
+  address: `0x${string}`;
   decimals: number;
   logoURI: string;
 }
 
-// A common Sepolia WETH address
+export const ETH_TOKEN: Token = {
+  name: 'Ethereum',
+  symbol: 'ETH',
+  address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 
+  decimals: 18,
+  logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+};
+
 export const WETH_TOKEN: Token = {
   name: 'Wrapped Ether',
   symbol: 'WETH',
@@ -17,15 +24,13 @@ export const WETH_TOKEN: Token = {
   logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
 };
 
-// A common Sepolia USDC address
-// ❗️ IMPORTANT: Replace this with the actual address of your USDC token on Sepolia
 export const USDC_TOKEN: Token = {
   name: 'USD Coin',
   symbol: 'USDC',
-  address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7a90',
-  decimals: 6, // USDC typically has 6 decimals
+  // CORRECTED: Used the valid EIP-55 checksum address
+  address: '0x1C7D4B196cB0c7B01D743FBC6116a902379C7a90',
+  decimals: 6,
   logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png',
 };
 
-// The list of tokens you want to make available in the TokenSelector
-export const TOKENS: Token[] = [WETH_TOKEN, USDC_TOKEN];
+export const TOKENS: Token[] = [ETH_TOKEN, WETH_TOKEN, USDC_TOKEN];

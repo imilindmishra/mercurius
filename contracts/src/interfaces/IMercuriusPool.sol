@@ -21,6 +21,9 @@ interface IMercuriusPool {
     function slot0() external view returns (uint160 sqrtPriceX96, int24 tick);
     function ticks(int24 tick) external view returns (uint128 liquidityGross, int128 liquidityNet);
     function positions(bytes32 key) external view returns (uint128 liquidity);
+    
+    
+    function tickBitmap(int16 word) external view returns (uint256);
 
     // Public functions
     function mint(

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {TickMath} from "./libraries/TickMath.sol";
 import {TickBitmap} from "./libraries/TickBitmap.sol";
 import {Tick} from "./libraries/Tick.sol";
@@ -9,6 +10,7 @@ import {SqrtPriceMath} from "./libraries/SqrtPriceMath.sol";
 import {SwapMath} from "./libraries/SwapMath.sol";
 import {Position} from "./libraries/Position.sol";
 import {IMercuriusPool} from "./interfaces/IMercuriusPool.sol";
+import {IMercuriusFactory} from "./interfaces/IMercuriusFactory.sol";
 
 contract MercuriusPool is IMercuriusPool {
     using Tick for mapping(int24 => Tick.Info);
@@ -28,6 +30,14 @@ contract MercuriusPool is IMercuriusPool {
     mapping(int16 => uint256) public override tickBitmap;
     mapping(bytes32 => Position.Info) public override positions;
 
+    struct SwapState {
+        uint256 amountSpecifiedRemaining;
+        uint256 amountCalculated;
+        uint160 sqrtPriceX96;
+        int24 tick;
+        uint128 liquidity;
+    }
+
     constructor() {
         (
             factory,
@@ -45,25 +55,22 @@ contract MercuriusPool is IMercuriusPool {
         int24 tickUpper,
         uint128 amount
     ) external override returns (uint256 amount0, uint256 amount1) {
+        // Unchanged
         require(
             tickLower < tickUpper &&
                 tickLower >= TickMath.MIN_TICK &&
                 tickUpper <= TickMath.MAX_TICK,
-            "IT" // Invalid Ticks
+            "IT"
         );
-
         ticks.update(tickLower, slot0.tick, amount, false);
         ticks.update(tickUpper, slot0.tick, amount, true);
-
         positions.update(
             keccak256(abi.encodePacked(recipient, tickLower, tickUpper)),
             amount
         );
-
         if (slot0.tick >= tickLower && slot0.tick < tickUpper) {
             liquidity = LiquidityMath.addDelta(liquidity, int128(amount));
         }
-
         (amount0, amount1) = _getAmountsForLiquidity(
             TickMath.getSqrtRatioAtTick(tickLower),
             TickMath.getSqrtRatioAtTick(tickUpper),
@@ -77,31 +84,14 @@ contract MercuriusPool is IMercuriusPool {
         uint256 amountSpecified,
         uint160 sqrtPriceLimitX96
     ) external override returns (int256 amount0, int256 amount1) {
+        // Calculations are unchanged
         Slot0 memory _slot0 = slot0;
-
-        if (zeroForOne) {
-            require(
-                sqrtPriceLimitX96 < _slot0.sqrtPriceX96 &&
-                    sqrtPriceLimitX96 > TickMath.MIN_SQRT_RATIO,
-                "SPL" // Sqrt Price Limit
-            );
-        } else {
-            require(
-                sqrtPriceLimitX96 > _slot0.sqrtPriceX96 &&
-                    sqrtPriceLimitX96 < TickMath.MAX_SQRT_RATIO,
-                "SPL" // Sqrt Price Limit
-            );
-        }
-
-        // This struct will track the state of the swap as it crosses ticks
-        struct SwapState {
-            uint256 amountSpecifiedRemaining;
-            uint256 amountCalculated;
-            uint160 sqrtPriceX96;
-            int24 tick;
-            uint128 liquidity;
-        }
-
+        require(
+            zeroForOne
+                ? sqrtPriceLimitX96 < _slot0.sqrtPriceX96 && sqrtPriceLimitX96 > TickMath.MIN_SQRT_RATIO
+                : sqrtPriceLimitX96 > _slot0.sqrtPriceX96 && sqrtPriceLimitX96 < TickMath.MAX_SQRT_RATIO,
+            "SPL"
+        );
         SwapState memory state = SwapState({
             amountSpecifiedRemaining: amountSpecified,
             amountCalculated: 0,
@@ -109,35 +99,20 @@ contract MercuriusPool is IMercuriusPool {
             tick: _slot0.tick,
             liquidity: liquidity
         });
-
-        // Loop until the entire specified amount is swapped
         while (state.amountSpecifiedRemaining > 0) {
             (int24 nextTick, ) = tickBitmap.nextInitializedTickWithinOneWord(
                 state.tick,
-                1, // tick spacing
+                1,
                 zeroForOne
             );
-
-            // Ensure nextTick is within valid bounds
-            nextTick = nextTick < TickMath.MIN_TICK
-                ? TickMath.MIN_TICK
-                : nextTick;
-            nextTick = nextTick > TickMath.MAX_TICK
-                ? TickMath.MAX_TICK
-                : nextTick;
-
+            nextTick = nextTick < TickMath.MIN_TICK ? TickMath.MIN_TICK : nextTick;
+            nextTick = nextTick > TickMath.MAX_TICK ? TickMath.MAX_TICK : nextTick;
             uint160 sqrtRatioTargetX96 = TickMath.getSqrtRatioAtTick(nextTick);
-            
             if (zeroForOne) {
-                if (sqrtRatioTargetX96 < sqrtPriceLimitX96) {
-                    sqrtRatioTargetX96 = sqrtPriceLimitX96;
-                }
+                if (sqrtRatioTargetX96 < sqrtPriceLimitX96) sqrtRatioTargetX96 = sqrtPriceLimitX96;
             } else {
-                if (sqrtRatioTargetX96 > sqrtPriceLimitX96) {
-                    sqrtRatioTargetX96 = sqrtPriceLimitX96;
-                }
+                if (sqrtRatioTargetX96 > sqrtPriceLimitX96) sqrtRatioTargetX96 = sqrtPriceLimitX96;
             }
-
             SwapMath.ComputeSwapStepResult memory step = SwapMath.computeSwapStep(
                 state.sqrtPriceX96,
                 sqrtRatioTargetX96,
@@ -145,20 +120,17 @@ contract MercuriusPool is IMercuriusPool {
                 state.amountSpecifiedRemaining,
                 fee
             );
-
             state.sqrtPriceX96 = step.sqrtRatioNextX96;
             state.amountSpecifiedRemaining -= (step.amountIn + step.feeAmount);
             state.amountCalculated += step.amountOut;
-
             if (state.sqrtPriceX96 == sqrtRatioTargetX96) {
-                int128 liquidityDelta = ticks[nextTick].cross(state.tick > nextTick);
+                int128 liquidityDelta = ticks.cross(nextTick, state.tick > nextTick);
                 state.liquidity = LiquidityMath.addDelta(state.liquidity, liquidityDelta);
                 state.tick = zeroForOne ? nextTick - 1 : nextTick;
             } else {
                 state.tick = TickMath.getTickAtSqrtRatio(state.sqrtPriceX96);
             }
         }
-
         if (zeroForOne) {
             amount0 = -int256(amountSpecified);
             amount1 = int256(state.amountCalculated);
@@ -166,17 +138,17 @@ contract MercuriusPool is IMercuriusPool {
             amount0 = int256(state.amountCalculated);
             amount1 = -int256(amountSpecified);
         }
-
-        // Update global pool state
         slot0.tick = state.tick;
         slot0.sqrtPriceX96 = state.sqrtPriceX96;
         liquidity = state.liquidity;
 
-        // Perform the token transfer (simplified for now)
+        // --- CORRECTED: Removed the incorrect transferFrom ---
         if (zeroForOne) {
-            // Transfer token0 from sender to pool, token1 from pool to recipient
+            // The router already sent token0 to this contract. We only send token1 out.
+            IERC20(token1).transfer(recipient, uint256(amount1));
         } else {
-            // Transfer token1 from sender to pool, token0 from pool to recipient
+            // The router already sent token1 to this contract. We only send token0 out.
+            IERC20(token0).transfer(recipient, uint256(amount0));
         }
     }
 
@@ -185,18 +157,11 @@ contract MercuriusPool is IMercuriusPool {
         uint160 sqrtRatioBX96,
         uint128 _liquidity
     ) private pure returns (uint256 amount0, uint256 amount1) {
+        // Unchanged
         if (sqrtRatioAX96 > sqrtRatioBX96) {
             (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
         }
-        amount0 = SqrtPriceMath.getAmount0Delta(
-            sqrtRatioAX96,
-            sqrtRatioBX96,
-            _liquidity
-        );
-        amount1 = SqrtPriceMath.getAmount1Delta(
-            sqrtRatioAX96,
-            sqrtRatioBX96,
-            _liquidity
-        );
+        amount0 = SqrtPriceMath.getAmount0Delta(sqrtRatioAX96, sqrtRatioBX96, _liquidity);
+        amount1 = SqrtPriceMath.getAmount1Delta(sqrtRatioAX96, sqrtRatioBX96, _liquidity);
     }
 }

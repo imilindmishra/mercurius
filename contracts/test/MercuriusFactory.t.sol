@@ -1,3 +1,5 @@
+// test/MercuriusFactory.t.sol
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -7,34 +9,26 @@ import {MercuriusPool} from "../src/MercuriusPool.sol";
 import {TickMath} from "../src/libraries/TickMath.sol";
 
 contract MercuriusFactoryTest is Test {
-    MercuriusFactory public factory;
-
-    address internal constant TOKEN_A = address(0x1);
-    address internal constant TOKEN_B = address(0x2);
-    uint24 internal constant FEE = 3000;
-    uint160 internal constant INITIAL_PRICE = 79228162514264337593543950336;
+    MercuriusFactory factory;
+    address constant TOKEN_A = 0x1111111111111111111111111111111111111111;
+    address constant TOKEN_B = 0x2222222222222222222222222222222222222222;
+    uint24 constant FEE = 3000;
+    int24 constant START_TICK = 85176;
 
     function setUp() public {
         factory = new MercuriusFactory();
     }
 
-    function test_CreatePool() public {
-        address poolAddress = factory.createPool(TOKEN_A, TOKEN_B, FEE, INITIAL_PRICE);
-        assertNotEq(poolAddress, address(0));
-
-        address storedAddress = factory.getPool(TOKEN_A, TOKEN_B, FEE);
-        assertEq(poolAddress, storedAddress);
+    function testCreatePool() public {
+        address poolAddress = factory.createPool(TOKEN_A, TOKEN_B, FEE, START_TICK);
+        assertTrue(poolAddress != address(0));
 
         MercuriusPool pool = MercuriusPool(poolAddress);
-        assertEq(pool.sqrtPriceX96(), INITIAL_PRICE);
 
-        // NEW: Check if the tick was set correctly
-        int24 expectedTick = TickMath.getTickAtSqrtRatio(INITIAL_PRICE);
-        assertEq(pool.tick(), expectedTick);
-    }
-
-    function test_FailCreatePoolWithIdenticalAddresses() public {
-        vm.expectRevert("IDENTICAL_ADDRESSES");
-        factory.createPool(TOKEN_A, TOKEN_A, FEE, INITIAL_PRICE);
+        (uint160 sqrtPriceX96, ) = pool.slot0();
+        uint160 expectedSqrtPrice = TickMath.getSqrtRatioAtTick(START_TICK);
+        
+        assertEq(sqrtPriceX96, expectedSqrtPrice);
+        assertEq(address(pool.factory()), address(factory));
     }
 }

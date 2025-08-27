@@ -15,7 +15,7 @@ contract MercuriusFactory is IMercuriusFactory {
         address token0;
         address token1;
         uint24 fee;
-        int24 tickSpacing;
+        int24 initialTick;
     }
 
     PoolParameters public override parameters;
@@ -24,7 +24,7 @@ contract MercuriusFactory is IMercuriusFactory {
         address tokenA,
         address tokenB,
         uint24 fee,
-        int24 tickSpacing
+        int24 initialTick
     ) external returns (address pool) {
         require(tokenA != tokenB, "IDENTICAL_ADDRESSES");
         (address token0, address token1) = tokenA < tokenB
@@ -39,7 +39,7 @@ contract MercuriusFactory is IMercuriusFactory {
             token0: token0,
             token1: token1,
             fee: fee,
-            tickSpacing: tickSpacing
+            initialTick: initialTick
         });
         
         pool = address(new MercuriusPool());

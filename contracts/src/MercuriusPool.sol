@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TickMath} from "./libraries/TickMath.sol";
 import {TickBitmap} from "./libraries/TickBitmap.sol";
 import {Tick} from "./libraries/Tick.sol";
@@ -16,7 +16,6 @@ contract MercuriusPool is IMercuriusPool {
     using Tick for mapping(int24 => Tick.Info);
     using TickBitmap for mapping(int16 => uint256);
     using Position for mapping(bytes32 => Position.Info);
-    using Position for Position.Info;
 
     address public immutable override factory;
     address public immutable override token0;
@@ -55,22 +54,22 @@ contract MercuriusPool is IMercuriusPool {
         int24 tickUpper,
         uint128 amount
     ) external override returns (uint256 amount0, uint256 amount1) {
-        // Unchanged
         require(
             tickLower < tickUpper &&
                 tickLower >= TickMath.MIN_TICK &&
                 tickUpper <= TickMath.MAX_TICK,
             "IT"
         );
+        
+        // This function's only job is to update ticks and liquidity.
+        // The NonfungiblePositionManager handles the position mapping.
         ticks.update(tickLower, slot0.tick, amount, false);
         ticks.update(tickUpper, slot0.tick, amount, true);
-        positions.update(
-            keccak256(abi.encodePacked(recipient, tickLower, tickUpper)),
-            amount
-        );
+
         if (slot0.tick >= tickLower && slot0.tick < tickUpper) {
             liquidity = LiquidityMath.addDelta(liquidity, int128(amount));
         }
+
         (amount0, amount1) = _getAmountsForLiquidity(
             TickMath.getSqrtRatioAtTick(tickLower),
             TickMath.getSqrtRatioAtTick(tickUpper),
@@ -84,7 +83,6 @@ contract MercuriusPool is IMercuriusPool {
         uint256 amountSpecified,
         uint160 sqrtPriceLimitX96
     ) external override returns (int256 amount0, int256 amount1) {
-        // Calculations are unchanged
         Slot0 memory _slot0 = slot0;
         require(
             zeroForOne
@@ -142,12 +140,9 @@ contract MercuriusPool is IMercuriusPool {
         slot0.sqrtPriceX96 = state.sqrtPriceX96;
         liquidity = state.liquidity;
 
-        // --- CORRECTED: Removed the incorrect transferFrom ---
         if (zeroForOne) {
-            // The router already sent token0 to this contract. We only send token1 out.
             IERC20(token1).transfer(recipient, uint256(amount1));
         } else {
-            // The router already sent token1 to this contract. We only send token0 out.
             IERC20(token0).transfer(recipient, uint256(amount0));
         }
     }
@@ -157,7 +152,6 @@ contract MercuriusPool is IMercuriusPool {
         uint160 sqrtRatioBX96,
         uint128 _liquidity
     ) private pure returns (uint256 amount0, uint256 amount1) {
-        // Unchanged
         if (sqrtRatioAX96 > sqrtRatioBX96) {
             (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
         }

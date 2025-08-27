@@ -1,5 +1,3 @@
-// client/src/utils/tokens.ts
-
 export interface Token {
   name: string;
   symbol: string;
@@ -8,29 +6,24 @@ export interface Token {
   logoURI: string;
 }
 
-export const ETH_TOKEN: Token = {
-  name: 'Ethereum',
-  symbol: 'ETH',
-  address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 
+// UPDATED with your new token addresses from the deployment
+const KAJU_ADDRESS = '0x3C8Dd7870E9a8e7e996543C4ADeB643438D4Aba8';
+const BRFI_ADDRESS = '0xE6DC9225E4C76f9c0b002Ab2782F687e35cc7666';
+
+export const KAJU_TOKEN: Token = {
+  name: 'KAJUCOIN',
+  symbol: 'KAJU',
+  address: KAJU_ADDRESS,
   decimals: 18,
-  logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  logoURI: '/placeholder-logo-1.png',
 };
 
-export const WETH_TOKEN: Token = {
-  name: 'Wrapped Ether',
-  symbol: 'WETH',
-  address: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
+export const BRFI_TOKEN: Token = {
+  name: 'BRFICOIN',
+  symbol: 'BRFI',
+  address: BRFI_ADDRESS,
   decimals: 18,
-  logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  logoURI: '/placeholder-logo-2.png',
 };
 
-export const USDC_TOKEN: Token = {
-  name: 'USD Coin',
-  symbol: 'USDC',
-  // CORRECTED: Used the valid EIP-55 checksum address
-  address: '0x1C7D4B196cB0c7B01D743FBC6116a902379C7a90',
-  decimals: 6,
-  logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png',
-};
-
-export const TOKENS: Token[] = [ETH_TOKEN, WETH_TOKEN, USDC_TOKEN];
+export const TOKENS: Token[] = [KAJU_TOKEN, BRFI_TOKEN];

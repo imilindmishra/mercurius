@@ -20,4 +20,11 @@ interface IMercuriusFactory {
             uint24 fee,
             int24 tickSpacing
         );
+
+    function createPool(
+        address tokenA,
+        address tokenB,
+        uint24 fee,
+        int24 initialTick
+    ) external returns (address pool);
 }

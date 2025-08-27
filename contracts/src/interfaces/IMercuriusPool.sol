@@ -1,3 +1,5 @@
+// contracts/src/interfaces/IMercuriusPool.sol
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -5,6 +7,7 @@ import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
 interface IMercuriusPool {
+    // --- THIS STRUCT DEFINITION WAS LIKELY MISSING ---
     struct Slot0 {
         // The current price of the pool
         uint160 sqrtPriceX96;
@@ -21,8 +24,6 @@ interface IMercuriusPool {
     function slot0() external view returns (uint160 sqrtPriceX96, int24 tick);
     function ticks(int24 tick) external view returns (uint128 liquidityGross, int128 liquidityNet);
     function positions(bytes32 key) external view returns (uint128 liquidity);
-    
-    
     function tickBitmap(int16 word) external view returns (uint256);
 
     // Public functions
